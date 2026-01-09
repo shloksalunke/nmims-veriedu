@@ -30,9 +30,3 @@ This project is built with:
 - Tailwind CSS
 
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-=======
-# nmims-veriedu
->>>>>>> e1e81522c17e833d49076471400e69de1babb9ac
