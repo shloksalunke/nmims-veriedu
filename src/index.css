@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================
+   NMIMS THEME TOKENS
+   ============================ */
+@layer base {
+  :root {
+    /* Core NMIMS Brand */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* NMIMS Red */
+    --primary: 354 100% 41%; /* #CF0015 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Neutral UI */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 15%;
+
+    /* Status */
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 40 90% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 354 100% 41%;
+
+    --radius: 0.25rem;
+
+    /* Header & Tables */
+    --header-bg: 0 0% 100%;
+    --header-foreground: 0 0% 0%;
+
+    --table-header: 0 0% 96%;
+    --table-border: 0 0% 85%;
+    --table-row-alt: 0 0% 98%;
+  }
+}
+
+/* ============================
+   BASE STYLES
+   ============================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Open Sans', Arial, sans-serif;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-weight: 700;
+  }
+}
+
+/* ============================
+   COMPONENT STYLES
+   ============================ */
+@layer components {
+  /* Header (FIXED – no Tailwind apply on CSS variables) */
+  .portal-header {
+    background-color: hsl(var(--header-bg));
+    color: hsl(var(--header-foreground));
+    @apply py-4 px-6 border-b border-border;
+  }
+
+  /* Tables */
+  .portal-table {
+    @apply w-full border-collapse border border-table-border bg-card;
+  }
+
+  .portal-table th {
+    @apply bg-table-header border border-table-border px-4 py-3 text-left text-sm font-semibold;
+  }
+
+  .portal-table td {
+    @apply border border-table-border px-4 py-3 text-sm;
+  }
+
+  .portal-table tr:nth-child(even) {
+    @apply bg-table-row-alt;
+  }
+
+  /* Forms */
+  .form-section {
+    @apply bg-card border border-border p-6 mb-6;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-foreground mb-1;
+  }
+
+  .form-input {
+    @apply w-full border border-input px-3 py-2 text-sm bg-card
+           focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  .form-select {
+    @apply w-full border border-input px-3 py-2 text-sm bg-card
+           focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-6 py-2 text-sm font-semibold
+           hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground border border-border px-6 py-2 text-sm font-medium
+           hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  /* Radio cards */
+  .radio-card {
+    @apply border-2 border-border p-6 cursor-pointer transition-colors;
+  }
+
+  .radio-card:hover {
+    border-color: hsl(var(--primary));
+  }
+
+  .radio-card.selected {
+    @apply bg-accent;
+    border-color: hsl(var(--primary));
+  }
+
+  /* Status badges */
+  .status-pending {
+    @apply bg-warning/20 text-warning px-2 py-1 text-xs font-semibold;
+  }
+
+  .status-inprocess {
+    @apply bg-primary/20 text-primary px-2 py-1 text-xs font-semibold;
+  }
+
+  .status-completed {
+    @apply bg-success/20 text-success px-2 py-1 text-xs font-semibold;
+  }
+
+  /* Page helpers */
+  .page-title {
+    @apply text-xl font-semibold text-foreground border-b border-border pb-3 mb-6;
+  }
+
+  .breadcrumb {
+    @apply text-sm text-muted-foreground mb-4;
+  }
+
+  .note-box {
+    @apply bg-accent border-l-4 border-primary p-4 text-sm;
+  }
+}
+
+/* ============================
+   PRINT / INVOICE
+   ============================ */
+@media print {
+  header,
+  footer,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .form-section {
+    border: none;
+    padding: 0;
+  }
+}
