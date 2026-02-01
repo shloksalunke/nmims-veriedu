@@ -333,6 +333,7 @@ const UserDashboardPage = () => {
                 <th className="border px-4 py-2 text-left text-sm font-semibold">Document</th>
                 <th className="border px-4 py-2 text-left text-sm font-semibold">Status</th>
                 <th className="border px-4 py-2 text-left text-sm font-semibold">Requested Date</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Verified Doc</th>
                 <th className="border px-4 py-2 text-left text-sm font-semibold">Download Invoice</th>
               </tr>
             </thead>
@@ -357,6 +358,29 @@ const UserDashboardPage = () => {
                     </td>
                     <td className="border px-4 py-3 text-sm">{formatDate(req.createdAt)}</td>
                     <td className="border px-4 py-3 text-sm">
+                      {req.approvedDocument ? (
+                        <a
+                          href={req.approvedDocument.dataUrl}
+                          download={req.approvedDocument.name}
+                          className="text-green-600 underline hover:text-green-800 font-medium text-xs"
+                          title={`Download: ${req.approvedDocument.name}`}
+                        >
+                          ✓ Confirmation
+                        </a>
+                      ) : req.rejectionDocument ? (
+                        <a
+                          href={req.rejectionDocument.dataUrl}
+                          download={req.rejectionDocument.name}
+                          className="text-red-600 underline hover:text-red-800 font-medium text-xs"
+                          title={`Download: ${req.rejectionDocument.name}`}
+                        >
+                          ✗ Rejection
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Pending</span>
+                      )}
+                    </td>
+                    <td className="border px-4 py-3 text-sm">
                       <button
                         onClick={() => generateInvoice(req)}
                         className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
@@ -368,7 +392,7 @@ const UserDashboardPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={11} className="border px-4 py-8 text-center text-gray-500">
+                  <td colSpan={12} className="border px-4 py-8 text-center text-gray-500">
                     No verification requests found. Click "Apply for Verification" to get started.
                   </td>
                 </tr>
