@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import PortalHeader from "@/components/PortalHeader";
@@ -7,6 +7,36 @@ import { nanoid } from "nanoid";
 
 const VerifyDocumentPage = () => {
   const navigate = useNavigate();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [submittedRequest, setSubmittedRequest] = useState<any>(null);
+
+  // Fee calculation function
+  const calculateFee = (yearOfPassing: string, requestType: "Regular" | "Urgent"): { baseAmount: number; amountPayable: number } => {
+    if (!yearOfPassing || requestType === "Urgent") {
+      // Urgent cases: Rs. 7000, with 18% GST = Rs. 8260
+      return { baseAmount: 7000, amountPayable: 8260 };
+    }
+
+    const currentYear = new Date().getFullYear();
+    const passing = parseInt(yearOfPassing);
+    const yearsAgo = currentYear - passing;
+
+    let baseAmount = 0;
+
+    // Period based fee calculation
+    if (yearsAgo <= 3) {
+      baseAmount = 2000; // Rs. 2000, with 18% GST = Rs. 2360
+    } else if (yearsAgo <= 5) {
+      baseAmount = 3000; // Rs. 3000, with 18% GST = Rs. 3540
+    } else if (yearsAgo <= 10) {
+      baseAmount = 4000; // Rs. 4000, with 18% GST = Rs. 4720
+    } else {
+      baseAmount = 5000; // Rs. 5000, with 18% GST = Rs. 5900
+    }
+
+    const amountPayable = Math.round(baseAmount * 1.18);
+    return { baseAmount, amountPayable };
+  };
 
   const [studentNumber, setStudentNumber] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -18,8 +48,15 @@ const VerifyDocumentPage = () => {
   const [yearOfPassing, setYearOfPassing] = useState("");
   const [cgpa, setCgpa] = useState("");
   const [requestType, setRequestType] = useState<"Regular" | "Urgent">("Regular");
-  const [amountPayable, setAmountPayable] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  // Calculate amount payable automatically
+  const { baseAmount, amountPayable } = useMemo(() => {
+    if (yearOfPassing && requestType) {
+      return calculateFee(yearOfPassing, requestType);
+    }
+    return { baseAmount: 0, amountPayable: 0 };
+  }, [yearOfPassing, requestType]);
 
   const handleStudentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStudentNumber(e.target.value);
@@ -56,6 +93,9 @@ const VerifyDocumentPage = () => {
 
     const fileDataUrl = await readFileAsDataUrl(uploadedFile);
 
+    // Get current user
+    const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || localStorage.getItem("currentUser") || "{}");
+
     const verificationRequest = {
       id: nanoid(),
       studentNumber,
@@ -68,14 +108,17 @@ const VerifyDocumentPage = () => {
       yearOfPassing,
       cgpa,
       requestType,
+      baseAmount,
       amountPayable,
+      receiverEmail: currentUser.email || "",
+      receiverNumber: currentUser.phone || "",
       documentFile: {
         name: uploadedFile.name,
         type: uploadedFile.type,
         dataUrl: fileDataUrl,
       },
       createdAt: new Date().toISOString(),
-      status: "PENDING",
+      status: "PENDING_PAYMENT_APPROVAL",
     };
 
     // Store in localStorage
@@ -83,13 +126,27 @@ const VerifyDocumentPage = () => {
     allRequests.push(verificationRequest);
     localStorage.setItem("verificationRequests", JSON.stringify(allRequests));
 
+    // Store the request and show payment modal
+    setSubmittedRequest(verificationRequest);
+    setShowPaymentModal(true);
+
     toast({
-      title: "Proceeding to Payment",
-      description: "Your verification request is being processed.",
+      title: "Application Submitted",
+      description: "Proceed with payment to complete your request.",
+    });
+  };
+
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    toast({
+      title: "Payment Successful",
+      description: "Your verification request has been received. Redirecting to dashboard...",
     });
 
-    // Navigate to payment or success page
-    navigate("/verification-success");
+    // Navigate to user dashboard after payment
+    setTimeout(() => {
+      navigate("/user-dashboard");
+    }, 1500);
   };
 
   return (
@@ -263,12 +320,11 @@ const VerifyDocumentPage = () => {
           <div>
             <label className="block text-sm font-medium mb-1">Amount Payable</label>
             <div className="flex items-end gap-4">
-              <input
-                type="text"
-                value={amountPayable}
-                onChange={(e) => setAmountPayable(e.target.value)}
-                className="w-48 border rounded px-3 py-2"
-              />
+              <div className="w-48 border rounded px-3 py-2 bg-gray-50 flex items-center">
+                <span className="text-sm font-medium">
+                  {amountPayable > 0 ? `Rs. ${amountPayable}/-` : "--"}
+                </span>
+              </div>
               <span className="text-sm text-gray-600">(including 18% GST)</span>
             </div>
           </div>
@@ -312,6 +368,62 @@ const VerifyDocumentPage = () => {
           </div>
         </div>
       </main>
+
+      {/* Payment Modal */}
+      {showPaymentModal && submittedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">💳</span>
+              </div>
+              <h2 className="text-2xl font-bold">Payment Required</h2>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded mb-6 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Base Amount:</span>
+                <span className="font-medium">Rs. {submittedRequest.baseAmount}/-</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">GST (18%):</span>
+                <span className="font-medium">Rs. {submittedRequest.amountPayable - submittedRequest.baseAmount}/-</span>
+              </div>
+              <div className="border-t pt-2 flex justify-between">
+                <span className="font-semibold">Total Payable:</span>
+                <span className="font-bold text-lg text-blue-600">Rs. {submittedRequest.amountPayable}/-</span>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-700 mb-3">Select Payment Method:</p>
+              <div className="space-y-2">
+                {["Card", "UPI/QR Code", "Netbanking", "Wallet", "Pay Later"].map((method) => (
+                  <label key={method} className="flex items-center p-2 border rounded cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="payment" defaultChecked={method === "Card"} className="mr-3" />
+                    <span className="text-sm font-medium">{method}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 px-4 py-2 border rounded font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePaymentComplete}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded font-medium hover:bg-blue-600"
+              >
+                Pay Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PortalFooter />
     </div>

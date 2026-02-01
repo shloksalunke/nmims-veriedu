@@ -10,6 +10,7 @@ import SignupPage from "./pages/SignupPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VerifyDocumentPage from "./pages/VerifyDocumentPage";
 import VerificationSuccessPage from "./pages/VerificationSuccessPage";
+import UserDashboardPage from "./pages/UserDashboardPage";
 import ThirdPartyLoginPage from "./pages/ThirdPartyLoginPage";
 import ThirdPartyRegisterPage from "./pages/ThirdPartyRegisterPage";
 import ThirdPartyDashboardPage from "./pages/ThirdPartyDashboardPage";
@@ -53,6 +54,7 @@ const App = () => (
             path="/verification-success"
             element={<VerificationSuccessPage />}
           />
+          <Route path="/user-dashboard" element={<UserDashboardPage />} />
 
           {/* Third Party Flow */}
           <Route path="/third-party/login" element={<ThirdPartyLoginPage />} />

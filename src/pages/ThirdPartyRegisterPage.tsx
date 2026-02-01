@@ -50,7 +50,20 @@ const ThirdPartyRegisterPage = () => {
       title: "Email Verified",
       description: "Your account has been activated successfully",
     });
-    navigate("/third-party/dashboard");
+    
+    // Store user info
+    const userData = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.companyEmail,
+      phone: formData.phone,
+      companyName: formData.companyName,
+      userType: "Third Party",
+    };
+    sessionStorage.setItem("currentUser", JSON.stringify(userData));
+    localStorage.setItem("currentUser", JSON.stringify(userData));
+    
+    navigate("/user-dashboard");
   };
 
   return (

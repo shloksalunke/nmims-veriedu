@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import PortalHeader from "@/components/PortalHeader";
 import PortalFooter from "@/components/PortalFooter";
-import { verificationRequests, syncRequests } from "@/lib/mockDb";
-
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
-  const [, forceRefresh] = useState(0);
+  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Load verification requests from localStorage
+    const allRequests = JSON.parse(localStorage.getItem("verificationRequests") || "[]");
+    setVerificationRequests(allRequests);
+  }, []);
 
   const handleLogout = () => {
     toast({
@@ -18,52 +23,85 @@ const AdminDashboardPage = () => {
     navigate("/");
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-green-100 text-green-800";
+      case "REJECTED":
+      case "PAYMENT_REJECTED":
+        return "bg-red-100 text-red-800";
+      case "PAYMENT_APPROVED":
+        return "bg-indigo-100 text-indigo-800";
+      case "IN_PROCESS":
+        return "bg-yellow-100 text-yellow-800";
+      case "PENDING_PAYMENT_APPROVAL":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-blue-100 text-blue-800";
+    }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case "PENDING_PAYMENT_APPROVAL":
+        return "Awaiting Payment";
+      case "PAYMENT_APPROVED":
+        return "Payment Approved";
+      case "PAYMENT_REJECTED":
+        return "Rejected";
+      case "IN_PROCESS":
+        return "In Review";
+      case "COMPLETED":
+        return "Completed";
+      default:
+        return status || "Pending";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
   const approvePayment = (id: string) => {
-    const req = verificationRequests.find((r) => r.id === id);
-    if (!req) return;
-    
-    req.paymentStatus = "PAID_APPROVED";
-    
-    // 🔑 persist to localStorage
-    syncRequests();
+    const updatedRequests = verificationRequests.map((req) => {
+      if (req.id === id) {
+        return { ...req, status: "PAYMENT_APPROVED" };
+      }
+      return req;
+    });
+    setVerificationRequests(updatedRequests);
+    localStorage.setItem("verificationRequests", JSON.stringify(updatedRequests));
     
     toast({
       title: "Payment Approved",
-      description:
-        "Payment has been validated by Accounts and forwarded to Examination Department.",
+      description: `Payment approved for ${verificationRequests.find(r => r.id === id)?.firstName}. Invoice will be sent to user.`,
     });
-  
-    forceRefresh((v) => v + 1);
   };
 
-
-  const paymentBadge = (status: string) => {
-    if (status === "PAID_APPROVED") return "status-completed";
-    if (status === "PAID_PENDING_ACCOUNTS") return "status-inprocess";
-    return "status-pending";
+  const rejectPayment = (id: string) => {
+    const updatedRequests = verificationRequests.map((req) => {
+      if (req.id === id) {
+        return { ...req, status: "PAYMENT_REJECTED" };
+      }
+      return req;
+    });
+    setVerificationRequests(updatedRequests);
+    localStorage.setItem("verificationRequests", JSON.stringify(updatedRequests));
+    
+    toast({
+      title: "Payment Rejected",
+      description: "Payment rejected. Request status updated to Rejected.",
+      variant: "destructive",
+    });
   };
 
-  const verificationBadge = (status: string) => {
-    if (status === "COMPLETED") return "status-completed";
-    if (status === "IN_PROCESS") return "status-inprocess";
-    return "status-pending";
-  };
-
-  /* ==========================
-     FILTERED VIEWS
-     ========================== */
-  const accountsQueue = verificationRequests.filter(
-    (r) =>
-      r.role !== "GOVT" &&
-      (r.paymentStatus === "PAYMENT_PENDING" ||
-        r.paymentStatus === "PAID_PENDING_ACCOUNTS")
-  );
-
-  const examinationQueue = verificationRequests.filter(
-    (r) =>
-      r.role === "GOVT" || r.paymentStatus === "PAID_APPROVED"
-  );
-
+  // Get payment pending requests
+  const paymentPendingRequests = verificationRequests.filter((r) => r.status === "PENDING_PAYMENT_APPROVAL");
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <PortalHeader
@@ -73,109 +111,143 @@ const AdminDashboardPage = () => {
       />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
-        <h2 className="page-title">Admin Dashboard</h2>
+        {/* PAYMENT APPROVAL QUEUE */}
+        {paymentPendingRequests.length > 0 && (
+          <div className="mb-12">
+            <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4">
+              <h2 className="text-xl font-bold text-orange-900 mb-1">⚠️ Payment Approval Queue</h2>
+              <p className="text-sm text-orange-700">{paymentPendingRequests.length} requests pending payment verification</p>
+            </div>
 
-        {/* ==========================
-           ACCOUNTS DEPARTMENT
-           ========================== */}
-        <div className="form-section">
-          <h3 className="font-semibold mb-4">
-            Accounts Department – Payment Validation
-          </h3>
+            <div className="overflow-x-auto border rounded-lg bg-white">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-orange-100">
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">SR. NO.</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Name</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Student No.</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Amount Paid</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Request Type</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Paid Date</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentPendingRequests.map((req, index) => (
+                    <tr key={req.id} className="border-b hover:bg-orange-50">
+                      <td className="border px-4 py-3 text-sm font-medium">{String(index + 1).padStart(3, "0")}</td>
+                      <td className="border px-4 py-3 text-sm">{req.firstName} {req.lastName}</td>
+                      <td className="border px-4 py-3 text-sm">{req.studentNumber}</td>
+                      <td className="border px-4 py-3 text-sm font-bold text-green-700">Rs. {req.amountPayable}/-</td>
+                      <td className="border px-4 py-3 text-sm">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                          {req.requestType}
+                        </span>
+                      </td>
+                      <td className="border px-4 py-3 text-sm">{formatDate(req.createdAt)}</td>
+                      <td className="border px-4 py-3 text-sm space-x-2">
+                        <button
+                          onClick={() => approvePayment(req.id)}
+                          className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 font-medium"
+                        >
+                          ✓ Approve
+                        </button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 font-medium">
+                              ✕ Reject
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Reject Payment?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Rejecting this payment will mark the verification request as "Rejected" on both admin and user dashboards. User will need to resubmit.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="flex gap-3">
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => rejectPayment(req.id)}
+                                className="bg-red-500 hover:bg-red-600 text-white"
+                              >
+                                Yes, Reject Payment
+                              </AlertDialogAction>
+                            </div>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
-          <table className="portal-table">
+        <h1 className="text-2xl font-bold mb-8">Document Verification</h1>
+
+        {/* Main Table */}
+        <div className="overflow-x-auto border rounded-lg">
+          <table className="w-full border-collapse">
             <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Fee Amount</th>
-                <th>Payment Status</th>
-                <th>Action</th>
+              <tr className="bg-blue-100">
+                <th className="border px-4 py-2 text-left text-sm font-semibold">SR. NO.</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Name</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Student No.</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Passing Year</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Program</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Stream</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Semester</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Document</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Status</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Requested Date</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Amount</th>
+                <th className="border px-4 py-2 text-left text-sm font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
-              {accountsQueue.map((req) => (
-                <tr key={req.id}>
-                  <td>{req.studentName}</td>
-                  <td>₹{req.feeAmount}</td>
-                  <td>
-                    <span className={paymentBadge(req.paymentStatus)}>
-                      {req.paymentStatus.replaceAll("_", " ")}
-                    </span>
-                  </td>
-                  <td>
-                    {req.paymentStatus === "PAID_PENDING_ACCOUNTS" ? (
-                      <button
-                        onClick={() => approvePayment(req.id)}
-                        className="btn-primary text-xs"
-                      >
-                        Approve Payment
-                      </button>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">
-                        Awaiting Payment
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-
-              {accountsQueue.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center py-4 text-sm">
-                    No pending payments
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ==========================
-           EXAMINATION DEPARTMENT
-           ========================== */}
-        <div className="form-section">
-          <h3 className="font-semibold mb-4">
-            Examination Department – Verification Processing
-          </h3>
-
-          <table className="portal-table">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Year</th>
-                <th>Requested By</th>
-                <th>Verification Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {examinationQueue.map((req) => (
-                <tr key={req.id}>
-                  <td>{req.studentName}</td>
-                  <td>{req.yearOfPassing}</td>
-                  <td>{req.role}</td>
-                  <td>
-                    <span className={verificationBadge(req.verificationStatus)}>
-                      {req.verificationStatus.replaceAll("_", " ")}
-                    </span>
-                  </td>
-                  <td>
+              {verificationRequests.map((req, index) => (
+                <tr key={req.id} className="border-b hover:bg-gray-50">
+                  <td className="border px-4 py-3 text-sm">{String(index + 1).padStart(3, "0")}</td>
+                  <td className="border px-4 py-3 text-sm">
                     <button
-                      onClick={() =>
-                        navigate(`/admin/verification/${req.id}`)
-                      }
-                      className="btn-secondary text-xs"
+                      onClick={() => navigate(`/admin/verification/${req.id}`)}
+                      className="text-blue-600 underline hover:text-blue-800"
                     >
-                      Open Request
+                      {req.firstName} {req.lastName}
+                    </button>
+                  </td>
+                  <td className="border px-4 py-3 text-sm">{req.studentNumber}</td>
+                  <td className="border px-4 py-3 text-sm">{req.yearOfPassing}</td>
+                  <td className="border px-4 py-3 text-sm">{req.programName}</td>
+                  <td className="border px-4 py-3 text-sm">{req.stream}</td>
+                  <td className="border px-4 py-3 text-sm">{req.semester}</td>
+                  <td className="border px-4 py-3 text-sm">
+                    {req.documentFile ? "Degree/Marksheet" : "-"}
+                  </td>
+                  <td className="border px-4 py-3 text-sm">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(req.status)}`}>
+                      {getStatusDisplay(req.status)}
+                    </span>
+                  </td>
+                  <td className="border px-4 py-3 text-sm">{formatDate(req.createdAt)}</td>
+                  <td className="border px-4 py-3 text-sm">Rs. {req.amountPayable}/-</td>
+                  <td className="border px-4 py-3 text-sm">
+                    <button
+                      onClick={() => navigate(`/admin/verification/${req.id}`)}
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                    >
+                      View/Process
                     </button>
                   </td>
                 </tr>
               ))}
 
-              {examinationQueue.length === 0 && (
+              {verificationRequests.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-4 text-sm">
-                    No requests available for verification
+                  <td colSpan={12} className="border px-4 py-8 text-center text-gray-500">
+                    No verification requests found
                   </td>
                 </tr>
               )}

@@ -45,9 +45,10 @@ const SignupPage = () => {
   };
 
   const handleVerifyEmail = () => {
-    toast({ title: "Email Verified", description: "Your account has been activated successfully" });
-    // After signup, take user to application flow
-    navigate("/verify-document");
+    toast({ title: "Email Verified", description: "Your account has been activated successfully. Please login to continue." });
+    
+    // After signup verification, go back to login page
+    navigate("/");
   };
 
   return (

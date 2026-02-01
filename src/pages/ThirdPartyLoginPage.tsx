@@ -12,11 +12,20 @@ const ThirdPartyLoginPage = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
+      // Store user info
+      const userData = {
+        email,
+        userType: "Third Party",
+        companyName: "Company",
+      };
+      sessionStorage.setItem("currentUser", JSON.stringify(userData));
+      localStorage.setItem("currentUser", JSON.stringify(userData));
+      
       toast({
         title: "Login Successful",
-        description: "Welcome to the Third Party Dashboard",
+        description: "Welcome to the Document Verification Portal",
       });
-      navigate("/third-party/dashboard");
+      navigate("/user-dashboard");
     } else {
       toast({
         title: "Login Failed",

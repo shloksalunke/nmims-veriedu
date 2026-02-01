@@ -1,9 +1,30 @@
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 import PortalHeader from "@/components/PortalHeader";
 import PortalFooter from "@/components/PortalFooter";
 
 const LandingPage = () => {
   const navigate = useNavigate();
+
+  const handleLogin = () => {
+    // Dummy login - in real scenario, validate credentials
+    const userData = {
+      firstName: "Demo",
+      lastName: "User",
+      email: "demo@nmims.edu",
+      phone: "9999999999",
+      userType: "Student",
+    };
+    sessionStorage.setItem("currentUser", JSON.stringify(userData));
+    localStorage.setItem("currentUser", JSON.stringify(userData));
+    
+    toast({
+      title: "Login Successful",
+      description: "Welcome to Document Verification Portal",
+    });
+    
+    navigate("/user-dashboard");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -66,7 +87,7 @@ const LandingPage = () => {
               {/* LOGIN BUTTON */}
               <button
                 className="w-full bg-primary text-primary-foreground py-2 font-medium"
-                onClick={() => navigate("/verify-document")}
+                onClick={handleLogin}
               >
                 Login
               </button>
