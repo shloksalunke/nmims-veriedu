@@ -3,36 +3,49 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import PortalHeader from "@/components/PortalHeader";
 import PortalFooter from "@/components/PortalFooter";
-import { verificationRequests } from "@/lib/mockDb";
-import { calculateFee } from "@/lib/feeCalculator";
 import { nanoid } from "nanoid";
-import { syncRequests } from "@/lib/mockDb";
 
 const VerifyDocumentPage = () => {
   const navigate = useNavigate();
 
-  const [studentName, setStudentName] = useState("Janhavi Shivgan");
-  const [passingYear, setPassingYear] = useState("2018");
-  const [department, setDepartment] = useState("BACHELOR OF ARTS (Hons.) Liberal Arts (JYOTI DALAL School of Liberal Arts)");
-  const [studentId, setStudentId] = useState("82012000001");
-  const [cgpa, setCgpa] = useState("3.70");
-  const [receiverNumber, setReceiverNumber] = useState("7999754380");
-  const [receiverEmail, setReceiverEmail] = useState("janhavi.shivgan@nmims.edu");
-  const [approvalStatus, setApprovalStatus] = useState<"approved" | "not_approved" | "forward">("approved");
-  const [correctionFile, setCorrectionFile] = useState<File | null>(null);
-  const [supportingFile, setSupportingFile] = useState<File | null>(null);
+  const [studentNumber, setStudentNumber] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [programName, setProgramName] = useState("");
+  const [stream, setStream] = useState("");
+  const [semester, setSemester] = useState("");
+  const [yearOfPassing, setYearOfPassing] = useState("");
+  const [cgpa, setCgpa] = useState("");
+  const [requestType, setRequestType] = useState<"Regular" | "Urgent">("Regular");
+  const [amountPayable, setAmountPayable] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const handleSubmit = async () => {
-    if (!studentName || !studentId) {
+  const handleStudentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setStudentNumber(e.target.value);
+    // In a real scenario, this would fetch student data automatically
+  };
+
+  const handleProceedToPayment = async () => {
+    if (!studentNumber || !firstName || !lastName || !schoolName || !programName || !stream || !semester || !yearOfPassing || !cgpa || !uploadedFile) {
       toast({
         title: "Missing Information",
-        description: "Please fill all required fields.",
+        description: "Please fill all required fields marked with *.",
         variant: "destructive",
       });
       return;
     }
 
-    // Read files to data URLs so admin can open them
+    if (!requestType) {
+      toast({
+        title: "Missing Request Type",
+        description: "Please select a request type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Read file to data URL
     const readFileAsDataUrl = (file: File): Promise<string> =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -41,47 +54,41 @@ const VerifyDocumentPage = () => {
         reader.readAsDataURL(file);
       });
 
-    const attachmentsPayload = [];
-    if (correctionFile) {
-      attachmentsPayload.push({
-        name: correctionFile.name,
-        type: correctionFile.type,
-        dataUrl: await readFileAsDataUrl(correctionFile),
-      });
-    }
-    if (supportingFile) {
-      attachmentsPayload.push({
-        name: supportingFile.name,
-        type: supportingFile.type,
-        dataUrl: await readFileAsDataUrl(supportingFile),
-      });
-    }
+    const fileDataUrl = await readFileAsDataUrl(uploadedFile);
 
-    const verificationData = {
+    const verificationRequest = {
       id: nanoid(),
-      studentName,
-      studentId,
-      passingYear,
-      department,
+      studentNumber,
+      firstName,
+      lastName,
+      schoolName,
+      programName,
+      stream,
+      semester,
+      yearOfPassing,
       cgpa,
-      receiverNumber,
-      receiverEmail,
-      approvalStatus,
-      attachments: attachmentsPayload,
-      verifiedAt: new Date().toISOString(),
-      verificationStatus: "VERIFIED",
+      requestType,
+      amountPayable,
+      documentFile: {
+        name: uploadedFile.name,
+        type: uploadedFile.type,
+        dataUrl: fileDataUrl,
+      },
+      createdAt: new Date().toISOString(),
+      status: "PENDING",
     };
 
-    // Store in localStorage for tracking
-    const allVerifications = JSON.parse(localStorage.getItem("verifications") || "[]");
-    allVerifications.push(verificationData);
-    localStorage.setItem("verifications", JSON.stringify(allVerifications));
+    // Store in localStorage
+    const allRequests = JSON.parse(localStorage.getItem("verificationRequests") || "[]");
+    allRequests.push(verificationRequest);
+    localStorage.setItem("verificationRequests", JSON.stringify(allRequests));
 
     toast({
-      title: "Verification Submitted",
-      description: "Document verification has been submitted successfully.",
+      title: "Proceeding to Payment",
+      description: "Your verification request is being processed.",
     });
 
+    // Navigate to payment or success page
     navigate("/verification-success");
   };
 
@@ -89,208 +96,221 @@ const VerifyDocumentPage = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <PortalHeader />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
-        <h1 className="text-2xl font-bold mb-8">Document Approval</h1>
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
 
-        {/* Document Request Details Table */}
-        <div className="border rounded-lg mb-8 overflow-hidden">
-          <table className="w-full border-collapse">
-            <tbody>
-              <tr className="border-b">
-                <td className="border-r p-4 font-medium bg-gray-50 w-1/3">
-                  Document request details:
-                </td>
-                <td className="p-4">Education Verification Confirmation</td>
-              </tr>
-              <tr className="border-b">
-                <td className="border-r p-4 font-medium">Name:</td>
-                <td className="p-4">
-                  <input
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
-                  />
-                </td>
-              </tr>
-              <tr className="border-b">
-                <td className="border-r p-4 font-medium">Passing Year / Department:</td>
-                <td className="p-4">
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={passingYear}
-                      onChange={(e) => setPassingYear(e.target.value)}
-                      placeholder="Year"
-                      className="w-full border rounded px-2 py-1"
-                    />
-                    <input
-                      type="text"
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      placeholder="Department"
-                      className="w-full border rounded px-2 py-1"
-                    />
-                  </div>
-                </td>
-              </tr>
-              <tr className="border-b">
-                <td className="border-r p-4 font-medium">Student ID:</td>
-                <td className="p-4">
-                  <input
-                    type="text"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
-                  />
-                </td>
-              </tr>
-              <tr className="border-b">
-                <td className="border-r p-4 font-medium">CGPA:</td>
-                <td className="p-4">
-                  <input
-                    type="text"
-                    value={cgpa}
-                    onChange={(e) => setCgpa(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
-                  />
-                </td>
-              </tr>
-              <tr>
-                <td className="border-r p-4 font-medium">Receiver Number / Email:</td>
-                <td className="p-4">
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={receiverNumber}
-                      onChange={(e) => setReceiverNumber(e.target.value)}
-                      placeholder="Phone Number"
-                      className="w-full border rounded px-2 py-1"
-                    />
-                    <input
-                      type="email"
-                      value={receiverEmail}
-                      onChange={(e) => setReceiverEmail(e.target.value)}
-                      placeholder="Email"
-                      className="w-full border rounded px-2 py-1"
-                    />
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* View Supporting Doc */}
-        <button className="text-blue-600 underline mb-6 hover:text-blue-800">
-          View supporting Doc
-        </button>
-
-        {/* Approval Options */}
-        <div className="border rounded-lg p-6 mb-8 bg-gray-50">
-          <div className="space-y-3">
-            <div className="flex items-center">
+        <div className="space-y-6">
+          {/* Row 1: Student Number, First Name, Last Name, School Name */}
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Student Number<span className="text-red-500">*</span>
+              </label>
               <input
-                type="radio"
-                id="approved"
-                name="approval"
-                value="approved"
-                checked={approvalStatus === "approved"}
-                onChange={(e) => setApprovalStatus(e.target.value as "approved" | "not_approved" | "forward")}
-                className="mr-3"
+                type="text"
+                placeholder="Enter Student Number"
+                value={studentNumber}
+                onChange={handleStudentNumberChange}
+                className="w-full border rounded px-3 py-2"
               />
-              <label htmlFor="approved" className="cursor-pointer">
-                Approved with Corrected Document
-              </label>
             </div>
-            <div className="flex items-center">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Student First Name<span className="text-red-500">*</span>
+              </label>
               <input
-                type="radio"
-                id="not_approved"
-                name="approval"
-                value="not_approved"
-                checked={approvalStatus === "not_approved"}
-                onChange={(e) => setApprovalStatus(e.target.value as "approved" | "not_approved" | "forward")}
-                className="mr-3"
+                type="text"
+                placeholder="Enter Student First Name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full border rounded px-3 py-2"
               />
-              <label htmlFor="not_approved" className="cursor-pointer">
-                Not Approved
-              </label>
             </div>
-            <div className="flex items-center">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Student Last Name<span className="text-red-500">*</span>
+              </label>
               <input
-                type="radio"
-                id="forward"
-                name="approval"
-                value="forward"
-                checked={approvalStatus === "forward"}
-                onChange={(e) => setApprovalStatus(e.target.value as "approved" | "not_approved" | "forward")}
-                className="mr-3"
+                type="text"
+                placeholder="Enter Student Last Name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full border rounded px-3 py-2"
               />
-              <label htmlFor="forward" className="cursor-pointer">
-                Forward for review
-              </label>
             </div>
-          </div>
-        </div>
-
-        {/* File Upload Section */}
-        <div className="border rounded-lg p-6 bg-gray-50 mb-8">
-          <div className="mb-4">
-            <label className="block font-medium mb-2">
-              Upload Corrected Document (if applicable)
-            </label>
-            <div className="flex items-center gap-2">
-              <label className="border rounded px-4 py-2 cursor-pointer bg-white hover:bg-gray-50">
-                Choose file
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  onChange={(e) => setCorrectionFile(e.target.files?.[0] || null)}
-                  className="hidden"
-                />
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                School Name<span className="text-red-500">*</span>
               </label>
-              <span className="text-sm text-gray-600">
-                {correctionFile ? correctionFile.name : "No file chosen"}
-              </span>
+              <input
+                type="text"
+                placeholder="Program Name"
+                value={schoolName}
+                onChange={(e) => setSchoolName(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
             </div>
           </div>
 
+          {/* Row 2: Program Name, Stream, Semester */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Program Name<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Program Name"
+                value={programName}
+                onChange={(e) => setProgramName(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Stream<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Stream"
+                value={stream}
+                onChange={(e) => setStream(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Semester<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Semester"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Year of Passing, CGPA, Request Type */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Year of Passing<span className="text-red-500">*</span>
+              </label>
+              <select
+                value={yearOfPassing}
+                onChange={(e) => setYearOfPassing(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="">Please select Year of passing</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                CGPA<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter CGPA"
+                value={cgpa}
+                onChange={(e) => setCgpa(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Request Type<span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="regular"
+                    name="requestType"
+                    value="Regular"
+                    checked={requestType === "Regular"}
+                    onChange={(e) => setRequestType(e.target.value as "Regular" | "Urgent")}
+                    className="mr-2"
+                  />
+                  <label htmlFor="regular" className="text-sm cursor-pointer">
+                    Regular
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="urgent"
+                    name="requestType"
+                    value="Urgent"
+                    checked={requestType === "Urgent"}
+                    onChange={(e) => setRequestType(e.target.value as "Regular" | "Urgent")}
+                    className="mr-2"
+                  />
+                  <label htmlFor="urgent" className="text-sm cursor-pointer">
+                    Urgent
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 4: Amount Payable */}
           <div>
-            <label className="block font-medium mb-2">
-              Upload Supporting Documents
+            <label className="block text-sm font-medium mb-1">Amount Payable</label>
+            <div className="flex items-end gap-4">
+              <input
+                type="text"
+                value={amountPayable}
+                onChange={(e) => setAmountPayable(e.target.value)}
+                className="w-48 border rounded px-3 py-2"
+              />
+              <span className="text-sm text-gray-600">(including 18% GST)</span>
+            </div>
+          </div>
+
+          {/* Upload Document */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Upload Document<span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center gap-2">
-              <label className="border rounded px-4 py-2 cursor-pointer bg-white hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <label className="bg-yellow-100 border border-yellow-300 rounded px-4 py-2 cursor-pointer hover:bg-yellow-50">
                 Choose file
                 <input
                   type="file"
                   accept="application/pdf,image/*"
-                  onChange={(e) => setSupportingFile(e.target.files?.[0] || null)}
+                  onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
               </label>
               <span className="text-sm text-gray-600">
-                {supportingFile ? supportingFile.name : "No file chosen"}
+                {uploadedFile ? uploadedFile.name : "No file chosen"}
               </span>
             </div>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-center">
-          <button
-            onClick={handleSubmit}
-            className="bg-blue-500 text-white px-8 py-2 rounded font-medium hover:bg-blue-600"
-          >
-            Submit
-          </button>
-        </div>
+          {/* Proceed to Payment Button */}
+          <div className="flex justify-center py-4">
+            <button
+              onClick={handleProceedToPayment}
+              className="bg-orange-500 text-white px-12 py-2 rounded font-medium hover:bg-orange-600"
+            >
+              Proceed to Payment
+            </button>
+          </div>
 
-        {/* Note */}
-        <p className="text-center text-sm text-gray-600 mt-8">
-          Student will receive mail on their registered email ID
-        </p>
+          {/* Bottom Note */}
+          <div className="mt-8 p-4 bg-gray-50 border rounded">
+            <p className="text-sm text-gray-700">
+              In case of applications received from Bar Councils/ Pharma Councils, Government employers like Railways, PWD etc will skip the payment gateway And application will be automatically appear in our ID's
+            </p>
+          </div>
+        </div>
       </main>
 
       <PortalFooter />
