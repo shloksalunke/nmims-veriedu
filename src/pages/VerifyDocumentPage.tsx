@@ -11,16 +11,19 @@ import { syncRequests } from "@/lib/mockDb";
 const VerifyDocumentPage = () => {
   const navigate = useNavigate();
 
-  const [studentName, setStudentName] = useState("");
-  const [studentNumber, setStudentNumber] = useState("");
-  const [year, setYear] = useState("");
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const [requestType] = useState<"REGULAR" | "URGENT">("REGULAR");
-  const [role, setRole] =
-    useState<"STUDENT" | "GOVT" | "THIRD_PARTY">("STUDENT");
+  const [studentName, setStudentName] = useState("Janhavi Shivgan");
+  const [passingYear, setPassingYear] = useState("2018");
+  const [department, setDepartment] = useState("BACHELOR OF ARTS (Hons.) Liberal Arts (JYOTI DALAL School of Liberal Arts)");
+  const [studentId, setStudentId] = useState("82012000001");
+  const [cgpa, setCgpa] = useState("3.70");
+  const [receiverNumber, setReceiverNumber] = useState("7999754380");
+  const [receiverEmail, setReceiverEmail] = useState("janhavi.shivgan@nmims.edu");
+  const [approvalStatus, setApprovalStatus] = useState<"approved" | "not_approved" | "forward">("approved");
+  const [correctionFile, setCorrectionFile] = useState<File | null>(null);
+  const [supportingFile, setSupportingFile] = useState<File | null>(null);
 
   const handleSubmit = async () => {
-    if (!studentName || !studentNumber || !year) {
+    if (!studentName || !studentId) {
       toast({
         title: "Missing Information",
         description: "Please fill all required fields.",
@@ -29,9 +32,7 @@ const VerifyDocumentPage = () => {
       return;
     }
 
-    const fee = calculateFee(Number(year), requestType, role);
-
-    // Read files to data URLs so admin can open them (stored in localStorage)
+    // Read files to data URLs so admin can open them
     const readFileAsDataUrl = (file: File): Promise<string> =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -40,39 +41,47 @@ const VerifyDocumentPage = () => {
         reader.readAsDataURL(file);
       });
 
-    const attachmentsPayload = await Promise.all(
-      attachments.map(async (f) => ({
-        name: f.name,
-        type: f.type,
-        dataUrl: await readFileAsDataUrl(f),
-      }))
-    );
+    const attachmentsPayload = [];
+    if (correctionFile) {
+      attachmentsPayload.push({
+        name: correctionFile.name,
+        type: correctionFile.type,
+        dataUrl: await readFileAsDataUrl(correctionFile),
+      });
+    }
+    if (supportingFile) {
+      attachmentsPayload.push({
+        name: supportingFile.name,
+        type: supportingFile.type,
+        dataUrl: await readFileAsDataUrl(supportingFile),
+      });
+    }
 
-    const request = {
+    const verificationData = {
       id: nanoid(),
       studentName,
-      studentNumber,
-      role,
-      yearOfPassing: year,
-      requestType,
-      feeAmount: fee,
-  attachments: attachmentsPayload,
-      paymentStatus:
-        role === "GOVT" ? "PAID_APPROVED" : "PAYMENT_PENDING",
-      verificationStatus: "OPEN",
-      createdAt: new Date().toISOString(),
-    } as const;
+      studentId,
+      passingYear,
+      department,
+      cgpa,
+      receiverNumber,
+      receiverEmail,
+      approvalStatus,
+      attachments: attachmentsPayload,
+      verifiedAt: new Date().toISOString(),
+      verificationStatus: "VERIFIED",
+    };
 
-    verificationRequests.push(request as any);
-    syncRequests();
+    // Store in localStorage for tracking
+    const allVerifications = JSON.parse(localStorage.getItem("verifications") || "[]");
+    allVerifications.push(verificationData);
+    localStorage.setItem("verifications", JSON.stringify(allVerifications));
 
     toast({
-      title: "Application Submitted",
-      description:
-        "Your application has been submitted. Acknowledgement generated.",
+      title: "Verification Submitted",
+      description: "Document verification has been submitted successfully.",
     });
 
-    // 📌 As per PDF: first acknowledgement, NOT direct payment
     navigate("/verification-success");
   };
 
@@ -80,93 +89,208 @@ const VerifyDocumentPage = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <PortalHeader />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
-        <p className="breadcrumb">
-          Home → Education Verification → Application Form
-        </p>
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
+        <h1 className="text-2xl font-bold mb-8">Document Approval</h1>
 
-        <h2 className="page-title">
-          Education Verification Application
-        </h2>
+        {/* Document Request Details Table */}
+        <div className="border rounded-lg mb-8 overflow-hidden">
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr className="border-b">
+                <td className="border-r p-4 font-medium bg-gray-50 w-1/3">
+                  Document request details:
+                </td>
+                <td className="p-4">Education Verification Confirmation</td>
+              </tr>
+              <tr className="border-b">
+                <td className="border-r p-4 font-medium">Name:</td>
+                <td className="p-4">
+                  <input
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </td>
+              </tr>
+              <tr className="border-b">
+                <td className="border-r p-4 font-medium">Passing Year / Department:</td>
+                <td className="p-4">
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={passingYear}
+                      onChange={(e) => setPassingYear(e.target.value)}
+                      placeholder="Year"
+                      className="w-full border rounded px-2 py-1"
+                    />
+                    <input
+                      type="text"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      placeholder="Department"
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  </div>
+                </td>
+              </tr>
+              <tr className="border-b">
+                <td className="border-r p-4 font-medium">Student ID:</td>
+                <td className="p-4">
+                  <input
+                    type="text"
+                    value={studentId}
+                    onChange={(e) => setStudentId(e.target.value)}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </td>
+              </tr>
+              <tr className="border-b">
+                <td className="border-r p-4 font-medium">CGPA:</td>
+                <td className="p-4">
+                  <input
+                    type="text"
+                    value={cgpa}
+                    onChange={(e) => setCgpa(e.target.value)}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="border-r p-4 font-medium">Receiver Number / Email:</td>
+                <td className="p-4">
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={receiverNumber}
+                      onChange={(e) => setReceiverNumber(e.target.value)}
+                      placeholder="Phone Number"
+                      className="w-full border rounded px-2 py-1"
+                    />
+                    <input
+                      type="email"
+                      value={receiverEmail}
+                      onChange={(e) => setReceiverEmail(e.target.value)}
+                      placeholder="Email"
+                      className="w-full border rounded px-2 py-1"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <div className="form-section">
-          <label className="form-label">Student Name *</label>
-          <input
-            className="form-input"
-            value={studentName}
-            onChange={(e) => setStudentName(e.target.value)}
-          />
+        {/* View Supporting Doc */}
+        <button className="text-blue-600 underline mb-6 hover:text-blue-800">
+          View supporting Doc
+        </button>
 
-          <label className="form-label mt-4">
-            Student Number / PRN *
-          </label>
-          <input
-            className="form-input"
-            value={studentNumber}
-            onChange={(e) => setStudentNumber(e.target.value)}
-          />
-
-          <label className="form-label mt-4">
-            Year of Passing *
-          </label>
-          <input
-            className="form-input"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-          />
-
-          <label className="form-label mt-4">
-            Requester Type *
-          </label>
-          <select
-            className="form-select"
-            value={role}
-            onChange={(e) =>
-              setRole(e.target.value as "STUDENT" | "GOVT" | "THIRD_PARTY")
-            }
-          >
-            <option value="STUDENT">Student / Alumni</option>
-            <option value="THIRD_PARTY">Third Party (Employer / Agency)</option>
-            <option value="GOVT">Government Department</option>
-          </select>
-
-          {/* UPLOAD: Degree / Marksheet */}
-          <label className="form-label mt-4">Upload Degree / Marksheet</label>
-          <input
-            type="file"
-            accept="application/pdf,image/*"
-            multiple
-            className="form-input"
-            onChange={(e) => {
-              const files = e.target.files ? Array.from(e.target.files) : [];
-              setAttachments(files);
-            }}
-          />
-
-          {attachments.length > 0 && (
-            <div className="mt-2 text-sm text-muted-foreground">
-              <p className="font-medium">Selected files:</p>
-              <ul className="list-disc ml-5 mt-1">
-                {attachments.map((f, idx) => (
-                  <li key={idx}>{f.name}</li>
-                ))}
-              </ul>
+        {/* Approval Options */}
+        <div className="border rounded-lg p-6 mb-8 bg-gray-50">
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="approved"
+                name="approval"
+                value="approved"
+                checked={approvalStatus === "approved"}
+                onChange={(e) => setApprovalStatus(e.target.value as "approved" | "not_approved" | "forward")}
+                className="mr-3"
+              />
+              <label htmlFor="approved" className="cursor-pointer">
+                Approved with Corrected Document
+              </label>
             </div>
-          )}
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="not_approved"
+                name="approval"
+                value="not_approved"
+                checked={approvalStatus === "not_approved"}
+                onChange={(e) => setApprovalStatus(e.target.value as "approved" | "not_approved" | "forward")}
+                className="mr-3"
+              />
+              <label htmlFor="not_approved" className="cursor-pointer">
+                Not Approved
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="forward"
+                name="approval"
+                value="forward"
+                checked={approvalStatus === "forward"}
+                onChange={(e) => setApprovalStatus(e.target.value as "approved" | "not_approved" | "forward")}
+                className="mr-3"
+              />
+              <label htmlFor="forward" className="cursor-pointer">
+                Forward for review
+              </label>
+            </div>
+          </div>
+        </div>
 
-          <div className="note-box mt-6">
-            Verification fees are applicable based on the nature of request and
-            year of passing. Payment (if applicable) will be collected after
-            application submission.
+        {/* File Upload Section */}
+        <div className="border rounded-lg p-6 bg-gray-50 mb-8">
+          <div className="mb-4">
+            <label className="block font-medium mb-2">
+              Upload Corrected Document (if applicable)
+            </label>
+            <div className="flex items-center gap-2">
+              <label className="border rounded px-4 py-2 cursor-pointer bg-white hover:bg-gray-50">
+                Choose file
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => setCorrectionFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-sm text-gray-600">
+                {correctionFile ? correctionFile.name : "No file chosen"}
+              </span>
+            </div>
           </div>
 
+          <div>
+            <label className="block font-medium mb-2">
+              Upload Supporting Documents
+            </label>
+            <div className="flex items-center gap-2">
+              <label className="border rounded px-4 py-2 cursor-pointer bg-white hover:bg-gray-50">
+                Choose file
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => setSupportingFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-sm text-gray-600">
+                {supportingFile ? supportingFile.name : "No file chosen"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-center">
           <button
             onClick={handleSubmit}
-            className="btn-primary mt-6"
+            className="bg-blue-500 text-white px-8 py-2 rounded font-medium hover:bg-blue-600"
           >
-            Submit Application
+            Submit
           </button>
         </div>
+
+        {/* Note */}
+        <p className="text-center text-sm text-gray-600 mt-8">
+          Student will receive mail on their registered email ID
+        </p>
       </main>
 
       <PortalFooter />
