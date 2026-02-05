@@ -7,9 +7,12 @@ import PortalFooter from "@/components/PortalFooter";
 
 const dummyReports = [
   {
-    studentName: "Rahul Sharma",
-    program: "B.Tech Computer Science",
-    specialization: "Data Science",
+    firstName: "Rahul",
+    lastName: "Sharma",
+    studentNumber: "STU20210001",
+    schoolName: "School of Technology Management & Engineering",
+    campusName: "Mumbai",
+    programName: "B.Tech Computer Science",
     yearOfPassing: "2023",
     cgpa: "8.5",
     institute: "STME Mumbai",
@@ -17,11 +20,18 @@ const dummyReports = [
     applicationDate: "2024-01-15",
     completionDate: "2024-01-22",
     status: "Completed",
+    totalPaymentReceived: 2360,
+    bankDetails: "Payment Gateway",
+    transactionId: "TXN-RAHUL2024",
+    applicationStatus: "Completed",
   },
   {
-    studentName: "Priya Patel",
-    program: "MBA",
-    specialization: "Finance",
+    firstName: "Priya",
+    lastName: "Patel",
+    studentNumber: "STU20200045",
+    schoolName: "School of Business Management",
+    campusName: "Bengaluru",
+    programName: "MBA",
     yearOfPassing: "2024",
     cgpa: "9.0",
     institute: "SBM Bangalore",
@@ -29,11 +39,18 @@ const dummyReports = [
     applicationDate: "2024-01-16",
     completionDate: "-",
     status: "In Process",
+    totalPaymentReceived: 3540,
+    bankDetails: "Payment Gateway",
+    transactionId: "TXN-PRIYA2024",
+    applicationStatus: "In Review",
   },
   {
-    studentName: "Amit Kumar",
-    program: "B.Com",
-    specialization: "Accounting",
+    firstName: "Amit",
+    lastName: "Kumar",
+    studentNumber: "STU20190078",
+    schoolName: "School of Commerce",
+    campusName: "Hyderabad",
+    programName: "B.Com",
     yearOfPassing: "2022",
     cgpa: "7.8",
     institute: "SOC Hyderabad",
@@ -41,11 +58,18 @@ const dummyReports = [
     applicationDate: "2024-01-17",
     completionDate: "2024-01-20",
     status: "Completed",
+    totalPaymentReceived: 4720,
+    bankDetails: "Payment Gateway",
+    transactionId: "TXN-AMIT2024",
+    applicationStatus: "Completed",
   },
   {
-    studentName: "Sneha Reddy",
-    program: "M.Sc",
-    specialization: "Physics",
+    firstName: "Sneha",
+    lastName: "Reddy",
+    studentNumber: "STU20180012",
+    schoolName: "School of Science",
+    campusName: "Navi Mumbai",
+    programName: "M.Sc",
     yearOfPassing: "2023",
     cgpa: "8.2",
     institute: "SOS Mumbai",
@@ -53,6 +77,10 @@ const dummyReports = [
     applicationDate: "2024-01-18",
     completionDate: "-",
     status: "Pending",
+    totalPaymentReceived: 0,
+    bankDetails: "-",
+    transactionId: "-",
+    applicationStatus: "Pending",
   },
 ];
 
@@ -72,9 +100,59 @@ const AdminReportsPage = () => {
   };
 
   const handleExportExcel = () => {
+    const headers = [
+      "Date of Application",
+      "First Name",
+      "Last Name",
+      "Student SAP / Registration Number",
+      "Name of School",
+      "Campus Name",
+      "Programme Name",
+      "Year of Passing",
+      "CGPA",
+      "Institute",
+      "Requested By",
+      "Total Payment Received",
+      "Bank Details",
+      "Transaction ID",
+      "Application Status",
+      "Completion Date",
+      "Status",
+    ];
+    const rows = reports.map((report) => [
+      report.applicationDate,
+      report.firstName,
+      report.lastName,
+      report.studentNumber,
+      report.schoolName,
+      report.campusName,
+      report.programName,
+      report.yearOfPassing,
+      report.cgpa,
+      report.institute,
+      report.requestedBy,
+      report.totalPaymentReceived,
+      report.bankDetails,
+      report.transactionId,
+      report.applicationStatus,
+      report.completionDate,
+      report.status,
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "verification-reports.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+
     toast({
       title: "Export Started",
-      description: "Excel report is being generated (simulation)",
+      description: "Excel report is being generated with updated fields.",
     });
   };
 
@@ -119,14 +197,21 @@ const AdminReportsPage = () => {
             <table className="portal-table text-xs">
               <thead>
                 <tr>
-                  <th>Student Name</th>
-                  <th>Program</th>
-                  <th>Specialization</th>
+                  <th>Date of Application</th>
+                  <th>First Name</th>
+                  <th>Last Name</th>
+                  <th>Student SAP / Registration Number</th>
+                  <th>Name of School</th>
+                  <th>Campus Name</th>
+                  <th>Programme Name</th>
                   <th>Year of Passing</th>
                   <th>CGPA</th>
                   <th>Institute</th>
                   <th>Requested By</th>
-                  <th>Application Date</th>
+                  <th>Total Payment Received</th>
+                  <th>Bank Details</th>
+                  <th>Transaction ID</th>
+                  <th>Application Status</th>
                   <th>Completion Date</th>
                   <th>Status</th>
                 </tr>
@@ -134,14 +219,21 @@ const AdminReportsPage = () => {
               <tbody>
                 {reports.map((report, index) => (
                   <tr key={index}>
-                    <td className="font-medium">{report.studentName}</td>
-                    <td>{report.program}</td>
-                    <td>{report.specialization}</td>
+                    <td className="font-medium">{report.applicationDate}</td>
+                    <td>{report.firstName}</td>
+                    <td>{report.lastName}</td>
+                    <td>{report.studentNumber}</td>
+                    <td>{report.schoolName}</td>
+                    <td>{report.campusName}</td>
+                    <td>{report.programName}</td>
                     <td>{report.yearOfPassing}</td>
                     <td>{report.cgpa}</td>
                     <td>{report.institute}</td>
                     <td>{report.requestedBy}</td>
-                    <td>{report.applicationDate}</td>
+                    <td>Rs. {report.totalPaymentReceived}/-</td>
+                    <td>{report.bankDetails}</td>
+                    <td>{report.transactionId}</td>
+                    <td>{report.applicationStatus}</td>
                     <td>{report.completionDate}</td>
                     <td>
                       <span className={getStatusClass(report.status)}>

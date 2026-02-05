@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import PortalHeader from "@/components/PortalHeader";
 import PortalFooter from "@/components/PortalFooter";
+import { loadVerificationRequests } from "@/lib/verificationStorage";
 
 const UserDashboardPage = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const UserDashboardPage = () => {
     setCurrentUser(user);
 
     // Load all verification requests and filter by current user
-    const allRequests = JSON.parse(localStorage.getItem("verificationRequests") || "[]");
+    const allRequests = loadVerificationRequests();
     
     // Filter requests based on user (by email or student number)
     const filtered = allRequests.filter((req: any) => {
@@ -349,7 +350,7 @@ const UserDashboardPage = () => {
                     <td className="border px-4 py-3 text-sm">{req.stream}</td>
                     <td className="border px-4 py-3 text-sm">{req.semester}</td>
                     <td className="border px-4 py-3 text-sm">
-                      {req.documentFile ? "Grade Sheet/Degree" : "-"}
+                      {req.degreeCertificateFile || req.marksheetFile || req.documentFile ? "Grade Sheet/Degree" : "-"}
                     </td>
                     <td className="border px-4 py-3 text-sm">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(req.status)}`}>

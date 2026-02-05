@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import PortalHeader from "@/components/PortalHeader";
 import PortalFooter from "@/components/PortalFooter";
+import { loadVerificationRequests, saveVerificationRequests } from "@/lib/verificationStorage";
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ const AdminDashboardPage = () => {
 
   useEffect(() => {
     // Load verification requests from localStorage
-    const allRequests = JSON.parse(localStorage.getItem("verificationRequests") || "[]");
+    const allRequests = loadVerificationRequests();
     setVerificationRequests(allRequests);
   }, []);
 
@@ -70,12 +71,12 @@ const AdminDashboardPage = () => {
   const approvePayment = (id: string) => {
     const updatedRequests = verificationRequests.map((req) => {
       if (req.id === id) {
-        return { ...req, status: "PAYMENT_APPROVED" };
+        return { ...req, status: "PAYMENT_APPROVED", applicationStatus: "Payment Approved" };
       }
       return req;
     });
     setVerificationRequests(updatedRequests);
-    localStorage.setItem("verificationRequests", JSON.stringify(updatedRequests));
+    saveVerificationRequests(updatedRequests);
     
     toast({
       title: "Payment Approved",
@@ -86,12 +87,12 @@ const AdminDashboardPage = () => {
   const rejectPayment = (id: string) => {
     const updatedRequests = verificationRequests.map((req) => {
       if (req.id === id) {
-        return { ...req, status: "PAYMENT_REJECTED" };
+        return { ...req, status: "PAYMENT_REJECTED", applicationStatus: "Rejected" };
       }
       return req;
     });
     setVerificationRequests(updatedRequests);
-    localStorage.setItem("verificationRequests", JSON.stringify(updatedRequests));
+    saveVerificationRequests(updatedRequests);
     
     toast({
       title: "Payment Rejected",
@@ -190,54 +191,59 @@ const AdminDashboardPage = () => {
         {/* Main Table */}
         <div className="overflow-x-auto border rounded-lg">
           <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-blue-100">
-                <th className="border px-4 py-2 text-left text-sm font-semibold">SR. NO.</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Name</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Student No.</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Passing Year</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Program</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Stream</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Semester</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Document</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Status</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Requested Date</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Amount</th>
-                <th className="border px-4 py-2 text-left text-sm font-semibold">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {verificationRequests.map((req, index) => (
-                <tr key={req.id} className="border-b hover:bg-gray-50">
-                  <td className="border px-4 py-3 text-sm">{String(index + 1).padStart(3, "0")}</td>
-                  <td className="border px-4 py-3 text-sm">
-                    <button
-                      onClick={() => navigate(`/admin/verification/${req.id}`)}
-                      className="text-blue-600 underline hover:text-blue-800"
-                    >
-                      {req.firstName} {req.lastName}
-                    </button>
-                  </td>
-                  <td className="border px-4 py-3 text-sm">{req.studentNumber}</td>
-                  <td className="border px-4 py-3 text-sm">{req.yearOfPassing}</td>
-                  <td className="border px-4 py-3 text-sm">{req.programName}</td>
-                  <td className="border px-4 py-3 text-sm">{req.stream}</td>
-                  <td className="border px-4 py-3 text-sm">{req.semester}</td>
-                  <td className="border px-4 py-3 text-sm">
-                    {req.documentFile ? "Degree/Marksheet" : "-"}
-                  </td>
-                  <td className="border px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(req.status)}`}>
-                      {getStatusDisplay(req.status)}
-                    </span>
-                  </td>
-                  <td className="border px-4 py-3 text-sm">{formatDate(req.createdAt)}</td>
-                  <td className="border px-4 py-3 text-sm">Rs. {req.amountPayable}/-</td>
-                  <td className="border px-4 py-3 text-sm">
-                    <button
-                      onClick={() => navigate(`/admin/verification/${req.id}`)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
-                    >
+                <thead>
+                  <tr className="bg-blue-100">
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">SR. NO.</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Date of Application</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">First Name</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Last Name</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Student SAP / Registration Number</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Name of School</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Campus Name</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Programme Name</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Year of Passing</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Stream</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Semester</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Document</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Total Payment Received</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Bank Details</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Transaction ID</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Application Status</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Status</th>
+                    <th className="border px-4 py-2 text-left text-sm font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {verificationRequests.map((req, index) => (
+                    <tr key={req.id} className="border-b hover:bg-gray-50">
+                      <td className="border px-4 py-3 text-sm">{String(index + 1).padStart(3, "0")}</td>
+                      <td className="border px-4 py-3 text-sm">{formatDate(req.createdAt)}</td>
+                      <td className="border px-4 py-3 text-sm">{req.firstName || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.lastName || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.studentNumber || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.schoolName || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.campusName || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.programName || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.yearOfPassing || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.stream || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.semester || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">
+                        {req.degreeCertificateFile || req.marksheetFile || req.documentFile ? "Degree/Marksheet" : "-"}
+                      </td>
+                      <td className="border px-4 py-3 text-sm">Rs. {req.totalPaymentReceived ?? 0}/-</td>
+                      <td className="border px-4 py-3 text-sm">{req.bankDetails || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.transactionId || "-"}</td>
+                      <td className="border px-4 py-3 text-sm">{req.applicationStatus || "Pending"}</td>
+                      <td className="border px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(req.status)}`}>
+                          {getStatusDisplay(req.status)}
+                        </span>
+                      </td>
+                      <td className="border px-4 py-3 text-sm">
+                        <button
+                          onClick={() => navigate(`/admin/verification/${req.id}`)}
+                          className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                        >
                       View/Process
                     </button>
                   </td>
@@ -246,7 +252,7 @@ const AdminDashboardPage = () => {
 
               {verificationRequests.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="border px-4 py-8 text-center text-gray-500">
+                  <td colSpan={18} className="border px-4 py-8 text-center text-gray-500">
                     No verification requests found
                   </td>
                 </tr>

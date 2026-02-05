@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import PortalHeader from "@/components/PortalHeader";
 import PortalFooter from "@/components/PortalFooter";
+import { loadVerificationRequests, saveVerificationRequests } from "@/lib/verificationStorage";
 
 const AdminVerificationPage = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const AdminVerificationPage = () => {
 
   useEffect(() => {
     // Load from localStorage
-    const allRequests = JSON.parse(localStorage.getItem("verificationRequests") || "[]");
+    const allRequests = loadVerificationRequests();
     const foundRequest = allRequests.find((r: any) => r.id === id);
     setRequest(foundRequest);
   }, [id]);
@@ -248,7 +249,7 @@ const AdminVerificationPage = () => {
     }
 
     // Update the request status
-    const allRequests = JSON.parse(localStorage.getItem("verificationRequests") || "[]");
+    const allRequests = loadVerificationRequests();
     const index = allRequests.findIndex((r: any) => r.id === id);
 
     if (index !== -1) {
@@ -260,12 +261,13 @@ const AdminVerificationPage = () => {
         const blob = new Blob([confirmationHtml], { type: "text/html" });
         reader.onload = () => {
           allRequests[index].status = "COMPLETED";
+          allRequests[index].applicationStatus = "Completed";
           allRequests[index].approvedDocument = {
             name: `Verification_Confirmation_${request.studentNumber}.html`,
             dataUrl: reader.result,
           };
           allRequests[index].verificationDate = new Date().toISOString();
-          localStorage.setItem("verificationRequests", JSON.stringify(allRequests));
+          saveVerificationRequests(allRequests);
 
           toast({
             title: "✓ Verification Approved",
@@ -293,13 +295,14 @@ const AdminVerificationPage = () => {
         const blob = new Blob([rejectionHtml], { type: "text/html" });
         reader.onload = () => {
           allRequests[index].status = "REJECTED";
+          allRequests[index].applicationStatus = "Rejected";
           allRequests[index].rejectionDocument = {
             name: `Verification_Rejection_${request.studentNumber}.html`,
             dataUrl: reader.result,
           };
           allRequests[index].rejectionReason = rejectionReason;
           allRequests[index].rejectionDate = new Date().toISOString();
-          localStorage.setItem("verificationRequests", JSON.stringify(allRequests));
+          saveVerificationRequests(allRequests);
 
           toast({
             title: "✗ Verification Rejected",
@@ -340,9 +343,10 @@ const AdminVerificationPage = () => {
         }
 
         allRequests[index].status = "IN_PROCESS";
+        allRequests[index].applicationStatus = "In Review";
         allRequests[index].forwardedTo = emailList;
         allRequests[index].forwardedDate = new Date().toISOString();
-        localStorage.setItem("verificationRequests", JSON.stringify(allRequests));
+        saveVerificationRequests(allRequests);
 
         toast({
           title: "Forwarded for Review",
@@ -414,7 +418,27 @@ const AdminVerificationPage = () => {
         </div>
 
         {/* View Document Button */}
-        {request.documentFile && (
+        {request.degreeCertificateFile && (
+          <a
+            href={request.degreeCertificateFile.dataUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 underline mb-2 block hover:text-blue-800"
+          >
+            View Degree Certificate
+          </a>
+        )}
+        {request.marksheetFile && (
+          <a
+            href={request.marksheetFile.dataUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 underline mb-6 block hover:text-blue-800"
+          >
+            View Marksheet
+          </a>
+        )}
+        {!request.degreeCertificateFile && !request.marksheetFile && request.documentFile && (
           <a
             href={request.documentFile.dataUrl}
             target="_blank"
